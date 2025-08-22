@@ -1,26 +1,75 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+  const provider: vscode.DefinitionProvider = {
+    provideDefinition(document, position) {
+      const range = document.getWordRangeAtPosition(position, /[A-Za-z0-9_]+/);
+      if (!range) return;
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "symfony-routing-jumper" is now active!');
+      const word = document.getText(range);
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('symfony-routing-jumper.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from symfony-routing-jumper!dayo-');
-	});
+      // 行全体を取得
+      const line = document.lineAt(position).text;
 
-	context.subscriptions.push(disposable);
+      // "module: xxx" or "action: yyy" をパース
+      if (line.includes('module:')) {
+        return jumpToActionFile(document.uri, word, null);
+      } else if (line.includes('action:')) {
+        // module の値を探す（上の行や同じブロック）
+        const module = findModuleAbove(document, position.line);
+        return jumpToActionFile(document.uri, module, word);
+      }
+    }
+  };
+
+  context.subscriptions.push(
+    vscode.languages.registerDefinitionProvider(
+      { pattern: '**/*routing.yml' },  // ファイル名が routing.yml ならどこでも
+      provider
+    )
+  );
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() {}
+function findModuleAbove(document: vscode.TextDocument, line: number): string | null {
+  for (let i = line; i >= 0; i--) {
+    const text = document.lineAt(i).text;
+    const match = text.match(/module:\s*(\w+)/);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+function jumpToActionFile(uri: vscode.Uri, module: string | null, action: string | null) {
+  if (!module) return;
+
+  const root = vscode.workspace.getWorkspaceFolder(uri);
+  if (!root) return;
+
+  const filePath = path.join(root.uri.fsPath, 'apps/frontend/modules', module, 'actions', 'actions.class.php');
+
+  if (!fs.existsSync(filePath)) return;
+
+  const target = vscode.Uri.file(filePath);
+
+  if (!action) {
+    return new vscode.Location(target, new vscode.Position(0, 0));
+  }
+
+  const text = fs.readFileSync(filePath, 'utf-8');
+  const regex = new RegExp(`function\\s+execute${capitalize(action)}\\s*\\(`);
+  const lines = text.split(/\r?\n/);
+
+  for (let i = 0; i < lines.length; i++) {
+    if (regex.test(lines[i])) {
+      return new vscode.Location(target, new vscode.Position(i, 0));
+    }
+  }
+
+  return new vscode.Location(target, new vscode.Position(0, 0));
+}
+
+function capitalize(str: string) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
