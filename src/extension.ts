@@ -45,9 +45,15 @@ function jumpToActionFile(uri: vscode.Uri, module: string | null, action: string
   const root = vscode.workspace.getWorkspaceFolder(uri);
   if (!root) return;
 
-  const filePath = path.join(root.uri.fsPath, 'apps/frontend/modules', module, 'actions', 'actions.class.php');
+  // routing.yml のパスからアプリ名を抽出
+  const match = uri.fsPath.match(/apps\/(.+?)\/config\/routing\.yml$/);
+  const appName = match ? match[1] : 'frontend'; // fallback
 
-  if (!fs.existsSync(filePath)) return;
+  const filePath = path.join(root.uri.fsPath, 'apps', appName, 'modules', module, 'actions', 'actions.class.php');
+
+  if (!fs.existsSync(filePath)) {
+    return;
+  }
 
   const target = vscode.Uri.file(filePath);
 
