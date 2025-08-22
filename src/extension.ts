@@ -14,9 +14,7 @@ export function activate(context: vscode.ExtensionContext) {
       const line = document.lineAt(position).text;
 
       // "module: xxx" or "action: yyy" をパース
-      if (line.includes('module:')) {
-        return jumpToActionFile(document.uri, word, null);
-      } else if (line.includes('action:')) {
+			if (line.includes('action:')) {
         // module の値を探す（上の行や同じブロック）
         const module = findModuleAbove(document, position.line);
         return jumpToActionFile(document.uri, module, word);
