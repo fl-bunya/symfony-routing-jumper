@@ -13,11 +13,19 @@ export function activate(context: vscode.ExtensionContext) {
       // 行全体を取得
       const line = document.lineAt(position).text;
 
-      // "module: xxx" or "action: yyy" をパース
-			if (line.includes('action:')) {
-        // module の値を探す（上の行や同じブロック）
-        const module = findModuleAbove(document, position.line);
-        return jumpToActionFile(document.uri, module, word);
+      // "action: yyy" の yyy 部分のみをクリック可能にする
+      const actionMatch = line.match(/action:\s*(\w+)/);
+      if (actionMatch) {
+        const actionValue = actionMatch[1];
+        const actionStart = actionMatch.index! + actionMatch[0].indexOf(actionValue);
+        const actionEnd = actionStart + actionValue.length;
+        
+        // クリック位置が action: の値の範囲内かチェック
+        if (position.character >= actionStart && position.character <= actionEnd) {
+          // module の値を探す（上の行や同じブロック）
+          const module = findModuleAbove(document, position.line);
+          return jumpToActionFile(document.uri, module, actionValue);
+        }
       }
     }
   };
