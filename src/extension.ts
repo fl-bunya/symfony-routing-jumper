@@ -5,10 +5,6 @@ import * as fs from 'fs';
 export function activate(context: vscode.ExtensionContext) {
   const provider: vscode.DefinitionProvider = {
     provideDefinition(document, position) {
-      const range = document.getWordRangeAtPosition(position, /[A-Za-z0-9_]+/);
-      if (!range) return;
-
-      const word = document.getText(range);
 
       // 行全体を取得
       const line = document.lineAt(position).text;
