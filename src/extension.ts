@@ -67,7 +67,10 @@ function jumpToActionFile(uri: vscode.Uri, module: string | null, action: string
 
   for (let i = 0; i < lines.length; i++) {
     if (regex.test(lines[i])) {
-      return new vscode.Location(target, new vscode.Position(i, 0));
+      // execute の位置を見つける
+      const executeMatch = lines[i].match(/execute/);
+      const column = executeMatch ? executeMatch.index! : 0;
+      return new vscode.Location(target, new vscode.Position(i, column));
     }
   }
 
